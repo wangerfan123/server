@@ -14,7 +14,7 @@
 using namespace std;
 
 template <class T>
-class block_queue
+class block_queue//阻塞队列
 {
 public:
     block_queue(int max_size = 1000)
@@ -149,7 +149,7 @@ public:
     bool pop(T &item)
     {
 
-        m_mutex.lock();
+        m_mutex.lock();//加锁
         while (m_size <= 0)
         {
             
@@ -160,10 +160,10 @@ public:
             }
         }
 
-        m_front = (m_front + 1) % m_max_size;
-        item = m_array[m_front];
+        m_front = (m_front + 1) % m_max_size;//向后移动1
+        item = m_array[m_front];//提取此内容
         m_size--;
-        m_mutex.unlock();
+        m_mutex.unlock();//解锁
         return true;
     }
 
@@ -199,8 +199,8 @@ public:
     }
 
 private:
-    locker m_mutex;
-    cond m_cond;
+    locker m_mutex;//阻塞队列锁
+    cond m_cond;//阻塞队列条件变量
 
     T *m_array;
     int m_size;

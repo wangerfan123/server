@@ -36,12 +36,12 @@ int Socket(const char *host, int clientPort)
     memset(&ad, 0, sizeof(ad));
     ad.sin_family = AF_INET;
 
-    inaddr = inet_addr(host);
+    inaddr = inet_addr(host);//将点分十进制字符串表示的IPV4地址转换为用网络字节序证书表示的IPV4地址
     if (inaddr != INADDR_NONE)
         memcpy(&ad.sin_addr, &inaddr, sizeof(inaddr));
     else
     {
-        hp = gethostbyname(host);
+        hp = gethostbyname(host);//根据主机名称获得主机的完整信息
         if (hp == NULL)
             return -1;
         memcpy(&ad.sin_addr, hp->h_addr, hp->h_length);

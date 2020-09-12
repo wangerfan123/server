@@ -29,10 +29,14 @@ Config::Config(){
     actor_model = 0;
 }
 
+//extern char* optarg  选项的参数
+//extern int optind  下一个检索位置
+//extern int opterr  是否将错误输出到stderr
+//extern int optopt  不在选项字符串中的选项
 void Config::parse_arg(int argc, char*argv[]){
     int opt;
-    const char *str = "p:v:l:m:o:s:t:c:a:";
-    while ((opt = getopt(argc, argv, str)) != -1)
+    const char *str = "p:v:l:m:o:s:t:c:a:";//选项字符串，冒号表示参数，两个冒号表示参数可选
+    while ((opt = getopt(argc, argv, str)) != -1)//返回opt——选项字符
     {
         switch (opt)
         {

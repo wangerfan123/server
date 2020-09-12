@@ -45,11 +45,11 @@ public:
 
 public:
     //基础
-    int m_port;
+    int m_port;//端口号
     char *m_root;
-    int m_log_write;
-    int m_close_log;
-    int m_actormodel;
+    int m_log_write;//日志方式写入
+    int m_close_log;//是否关闭日志
+    int m_actormodel;//并发模式
 
     int m_pipefd[2];
     int m_epollfd;
@@ -60,12 +60,12 @@ public:
     string m_user;         //登陆数据库用户名
     string m_passWord;     //登陆数据库密码
     string m_databaseName; //使用数据库名
-    int m_sql_num;
-    int m_SQLVerify;
+    int m_sql_num;//数据库连接池
+    int m_SQLVerify;//数据库校验方式
 
     //线程池相关
     threadpool<http_conn> *m_pool;
-    int m_thread_num;
+    int m_thread_num;//线程池线程数量
 
     //epoll_event相关
     epoll_event events[MAX_EVENT_NUMBER];

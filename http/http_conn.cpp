@@ -15,41 +15,47 @@ const char *error_500_title = "Internal Error";
 const char *error_500_form = "There was an unusual problem serving the request file.\n";
 
 locker m_lock;
-map<string, string> users;
+map<string, string> users;//用来保存从数据库查询结果的哈希表
 
 void http_conn::initmysql_result(connection_pool *connPool)
 {
     //先从连接池中取一个连接
     MYSQL *mysql = NULL;
-    connectionRAII mysqlcon(&mysql, connPool);
+    connectionRAII mysqlcon(&mysql, connPool);//赋给RAII内部成员，由于传入的是sql对象的地址，所以这里执行完之后mysql就直接是从连接池中取出来的一个对象
 
     //在user表中检索username，passwd数据，浏览器端输入
-    if (mysql_query(mysql, "SELECT username,passwd FROM user"))
+    if (mysql_query(mysql, "SELECT username,passwd FROM user"))//输入查询语句进行查询，返回成功说明查询成功，查询的结果不返回，而是暂时存在mysql对象中
     {
         LOG_ERROR("SELECT error:%s\n", mysql_error(mysql));
     }
 
     //从表中检索完整的结果集
-    MYSQL_RES *result = mysql_store_result(mysql);
+    MYSQL_RES *result = mysql_store_result(mysql);//通过这个函数从mysql对象中提取刚才的查询结果
 
-    //返回结果集中的列数
+    //返回结果的列数，应该是两列
     int num_fields = mysql_num_fields(result);
 
     //返回所有字段结构的数组
     MYSQL_FIELD *fields = mysql_fetch_fields(result);
 
     //从结果集中获取下一行，将对应的用户名和密码，存入map中
+    //经过多次循环的时候将数据库中所有的用户名和密码提取出来
     while (MYSQL_ROW row = mysql_fetch_row(result))
     {
-        string temp1(row[0]);
-        string temp2(row[1]);
+        string temp1(row[0]);//获得第一列name
+        string temp2(row[1]);//获得第二列passwd
         users[temp1] = temp2;
     }
 }
 
 void http_conn::initresultFile(connection_pool *connPool)
 {
-    ofstream out("./CGImysql/id_passwd.txt");
+    /*显式调用
+     ofstream out;
+    out.open("Hello.txt", ios::in|ios::out|ios::binary);
+    */
+    ofstream out("./CGImysql/id_passwd.txt");//隐式调用，打开文件
+    
     //先从连接池中取一个连接
     MYSQL *mysql = NULL;
     connectionRAII mysqlcon(&mysql, connPool);
@@ -78,16 +84,17 @@ void http_conn::initresultFile(connection_pool *connPool)
         users[temp1] = temp2;
     }
 
-    out.close();
+    out.close();//关闭文件
 }
 
 //对文件描述符设置非阻塞
 int setnonblocking(int fd)
 {
-    int old_option = fcntl(fd, F_GETFL);
-    int new_option = old_option | O_NONBLOCK;
-    fcntl(fd, F_SETFL, new_option);
-    return old_option;
+    //fcntl专门用来控制文件
+    int old_option = fcntl(fd, F_GETFL);//获取文件描述符的状态标志（旧）
+    int new_option = old_option | O_NONBLOCK;//设置为阻塞标志
+    fcntl(fd, F_SETFL, new_option);//重新设置文件描述符的状态标志
+    return old_option;//返回旧的，以便以后来恢复
 }
 
 //将内核事件表注册读事件，ET模式，选择开启EPOLLONESHOT
@@ -101,10 +108,13 @@ void addfd(int epollfd, int fd, bool one_shot, int TRIGMode)
     else
         event.events = EPOLLIN | EPOLLRDHUP;
 
+    //在一个线程处理一个scoket的时候，这个socket又产生了新的读写事件，这样的话又会唤醒一个线程也来处理这个socket，多线程同事处理一个socket显然是不希望出现的
+    //加入ONRSHOT之后，每个socket最多只能够被一个线程处理，只有这个线程处理完了之后，才会唤醒下一个线程来处理这个socket 
     if (one_shot)
         event.events |= EPOLLONESHOT;
     epoll_ctl(epollfd, EPOLL_CTL_ADD, fd, &event);
-    setnonblocking(fd);
+    setnonblocking(fd);//每一个加入epoll都设置为了非阻塞模式
+
 }
 
 //从内核时间表删除描述符
@@ -120,12 +130,12 @@ void modfd(int epollfd, int fd, int ev, int TRIGMode)
     epoll_event event;
     event.data.fd = fd;
 
-    if (1 == TRIGMode)
+    if (1 == TRIGMode)//ET模式
         event.events = ev | EPOLLET | EPOLLONESHOT | EPOLLRDHUP;
-    else
+    else    //LT模式
         event.events = ev | EPOLLONESHOT | EPOLLRDHUP;
 
-    epoll_ctl(epollfd, EPOLL_CTL_MOD, fd, &event);
+    epoll_ctl(epollfd, EPOLL_CTL_MOD, fd, &event);//修改event_epoll
 }
 
 int http_conn::m_user_count = 0;
@@ -180,7 +190,7 @@ void http_conn::init()
     m_version = 0;
     m_content_length = 0;
     m_host = 0;
-    m_start_line = 0;
+    m_start_line = 0;//每个行在buffer中的起始位置,之后对行内容进行范文不需要再把行内容复制到另一个缓冲区来使用
     m_checked_idx = 0;
     m_read_idx = 0;
     m_write_idx = 0;
@@ -189,8 +199,8 @@ void http_conn::init()
     timer_flag = 0;
     improv = 0;
 
-    memset(m_read_buf, '\0', READ_BUFFER_SIZE);
-    memset(m_write_buf, '\0', WRITE_BUFFER_SIZE);
+    memset(m_read_buf, '\0', READ_BUFFER_SIZE);//读缓冲区
+    memset(m_write_buf, '\0', WRITE_BUFFER_SIZE);//写缓冲区
     memset(m_real_file, '\0', FILENAME_LEN);
 }
 
@@ -232,25 +242,26 @@ http_conn::LINE_STATUS http_conn::parse_line()
 //非阻塞ET工作模式下，需要一次性将数据读完
 bool http_conn::read_once()
 {
-    if (m_read_idx >= READ_BUFFER_SIZE)
+    if (m_read_idx >= READ_BUFFER_SIZE)//大于读缓冲区长度
     {
         return false;
     }
     int bytes_read = 0;
-    while (true)
+    while (true)//循环读直到读完
     {
-        bytes_read = recv(m_sockfd, m_read_buf + m_read_idx, READ_BUFFER_SIZE - m_read_idx, 0);
+        //recv的作用就是将fd中的数据读到缓冲区中，第二个第三个为缓冲区的长度
+        bytes_read = recv(m_sockfd, m_read_buf + m_read_idx, READ_BUFFER_SIZE - m_read_idx, 0);//从sockfd读N个字符串到m_read_buf 中
         if (bytes_read == -1)
         {
-            if (errno == EAGAIN || errno == EWOULDBLOCK)
-                break;
+            if (errno == EAGAIN || errno == EWOULDBLOCK)//说明读完了
+                break;//读完直接退出while
             return false;
         }
         else if (bytes_read == 0)
         {
             return false;
         }
-        m_read_idx += bytes_read;
+        m_read_idx += bytes_read;//当大于0的话返回的就是读取的字节数
     }
     return true;
 }
@@ -356,7 +367,7 @@ http_conn::HTTP_CODE http_conn::parse_content(char *text)
     return NO_REQUEST;
 }
 
-http_conn::HTTP_CODE http_conn::process_read()
+http_conn::HTTP_CODE http_conn::process_read()//处理读的数据
 {
     LINE_STATUS line_status = LINE_OK;
     HTTP_CODE ret = NO_REQUEST;
@@ -367,16 +378,16 @@ http_conn::HTTP_CODE http_conn::process_read()
         text = get_line();
         m_start_line = m_checked_idx;
         LOG_INFO("%s", text);
-        switch (m_check_state)
+        switch (m_check_state)//有限状态机
         {
-        case CHECK_STATE_REQUESTLINE:
+        case CHECK_STATE_REQUESTLINE://处理请求行的状态
         {
             ret = parse_request_line(text);
             if (ret == BAD_REQUEST)
                 return BAD_REQUEST;
             break;
         }
-        case CHECK_STATE_HEADER:
+        case CHECK_STATE_HEADER://处理头部的状态
         {
             ret = parse_headers(text);
             if (ret == BAD_REQUEST)
@@ -387,7 +398,7 @@ http_conn::HTTP_CODE http_conn::process_read()
             }
             break;
         }
-        case CHECK_STATE_CONTENT:
+        case CHECK_STATE_CONTENT://处理内容的状态
         {
             ret = parse_content(text);
             if (ret == GET_REQUEST)
@@ -530,7 +541,8 @@ http_conn::HTTP_CODE http_conn::do_request()
 
                 if (pid == 0)
                 {
-                    //标准输出，文件描述符是1，然后将输出重定向到管道写端
+                    //标准输出，文件描述符是1，然后将输出重定向到管道写端。创建一个新的文件描述符，该新文件描述符和原来的指向相同的文件、管道或者网络连接。
+                    //复制之后标准输出的内容就会写道这个复制的fd中
                     dup2(pipefd[1], 1);
                     //关闭管道的读端
                     close(pipefd[0]);
@@ -802,11 +814,11 @@ bool http_conn::add_content(const char *content)
 {
     return add_response("%s", content);
 }
-bool http_conn::process_write(HTTP_CODE ret)
+bool http_conn::process_write(HTTP_CODE ret)//处理写
 {
     switch (ret)
     {
-    case INTERNAL_ERROR:
+    case INTERNAL_ERROR://内部服务器错误
     {
         add_status_line(500, error_500_title);
         add_headers(strlen(error_500_form));
@@ -814,7 +826,7 @@ bool http_conn::process_write(HTTP_CODE ret)
             return false;
         break;
     }
-    case BAD_REQUEST:
+    case BAD_REQUEST://用户输入错误的链接，请求的网页或资源不存在
     {
         add_status_line(404, error_404_title);
         add_headers(strlen(error_404_form));
@@ -822,7 +834,7 @@ bool http_conn::process_write(HTTP_CODE ret)
             return false;
         break;
     }
-    case FORBIDDEN_REQUEST:
+    case FORBIDDEN_REQUEST://服务器拒绝服务，权限不够
     {
         add_status_line(403, error_403_title);
         add_headers(strlen(error_403_form));
@@ -830,7 +842,7 @@ bool http_conn::process_write(HTTP_CODE ret)
             return false;
         break;
     }
-    case FILE_REQUEST:
+    case FILE_REQUEST://请求成功，并返回数据
     {
         add_status_line(200, ok_200_title);
         if (m_file_stat.st_size != 0)

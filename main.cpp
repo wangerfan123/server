@@ -4,8 +4,8 @@ int main(int argc, char *argv[])
 {
     //需要修改的数据库信息,登录名,密码,库名
     string user = "root";
-    string passwd = "root";
-    string databasename = "qgydb";
+    string passwd = "123";
+    string databasename = "wang";
 
     //命令行解析
     Config config;
@@ -27,7 +27,7 @@ int main(int argc, char *argv[])
     //线程池
     server.thread_pool();
 
-    //监听
+    //监听：创建、绑定、监听、epol初始化
     server.eventListen();
 
     //运行

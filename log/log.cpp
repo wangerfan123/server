@@ -9,7 +9,7 @@ using namespace std;
 Log::Log()
 {
     m_count = 0;
-    m_is_async = false;
+    m_is_async = false;//false为同步，true为异步
 }
 
 Log::~Log()
@@ -20,46 +20,47 @@ Log::~Log()
     }
 }
 //异步需要设置阻塞队列的长度，同步不需要设置
-bool Log::init(const char *file_name, int close_log, int log_buf_size, int split_lines, int max_queue_size)
+bool Log::init(const char *file_name, int close_log, int log_buf_size, int split_lines, int max_queue_size)//file_name="./ServerLog",是否关闭日志，日志缓冲区2000，行数800000，最大队列长度（跟日志写入方式有关）
 {
     //如果设置了max_queue_size,则设置为异步
-    if (max_queue_size >= 1)
+    if (max_queue_size >= 1)//异步时为800
     {
         m_is_async = true;
-        m_log_queue = new block_queue<string>(max_queue_size);
-        pthread_t tid;
-        //flush_log_thread为回调函数,这里表示创建线程异步写日志
-        pthread_create(&tid, NULL, flush_log_thread, NULL);
+        m_log_queue = new block_queue<string>(max_queue_size);//建立阻塞队列
+        pthread_t tid;//线程id
+        //flush_log_thread为回调函数,这里表示创建线程异步写日志（回调函数的意思就是先指定函数，之后某个时机再让线程执行这个线程）
+        pthread_create(&tid, NULL, flush_log_thread, NULL);//创建线程
     }
     
-    m_close_log = close_log;
+    m_close_log = close_log;//是否关闭日志
     m_log_buf_size = log_buf_size;
-    m_buf = new char[m_log_buf_size];
+    m_buf = new char[m_log_buf_size];//根据大小创建缓冲区
     memset(m_buf, '\0', m_log_buf_size);
     m_split_lines = split_lines;
 
-    time_t t = time(NULL);
+    time_t t = time(NULL);//返回1970.1.1至今的时间（s）
     struct tm *sys_tm = localtime(&t);
-    struct tm my_tm = *sys_tm;
+    struct tm my_tm = *sys_tm;//获得年月日等值
 
  
-    const char *p = strrchr(file_name, '/');
-    char log_full_name[256] = {0};
+    const char *p = strrchr(file_name, '/');//搜索file_name最后一次'/'的位置
+    char log_full_name[256] = {0};//日志全名
 
+    //将日志写入到log_full_name中
     if (p == NULL)
     {
-        snprintf(log_full_name, 255, "%d_%02d_%02d_%s", my_tm.tm_year + 1900, my_tm.tm_mon + 1, my_tm.tm_mday, file_name);
+        snprintf(log_full_name, 255, "%d_%02d_%02d_%s", my_tm.tm_year + 1900, my_tm.tm_mon + 1, my_tm.tm_mday, file_name);//生成日志全名
     }
     else
     {
         strcpy(log_name, p + 1);
         strncpy(dir_name, file_name, p - file_name + 1);
-        snprintf(log_full_name, 255, "%s%d_%02d_%02d_%s", dir_name, my_tm.tm_year + 1900, my_tm.tm_mon + 1, my_tm.tm_mday, log_name);
+        snprintf(log_full_name, 255, "%s%d_%02d_%02d_%s", dir_name, my_tm.tm_year + 1900, my_tm.tm_mon + 1, my_tm.tm_mday, log_name);//生成日志全名
     }
 
-    m_today = my_tm.tm_mday;
+    m_today = my_tm.tm_mday;//获得今天时间
     
-    m_fp = fopen(log_full_name, "a");
+    m_fp = fopen(log_full_name, "a");//为输出打开文件，输出操作总是再文件末尾追加数据，如果文件不存在，创建新文件。m_fp就是这个文件的文件描述符
     if (m_fp == NULL)
     {
         return false;

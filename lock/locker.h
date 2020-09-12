@@ -10,25 +10,25 @@ class sem
 public:
     sem()
     {
-        if (sem_init(&m_sem, 0, 0) != 0)
+        if (sem_init(&m_sem, 0, 0) != 0)//创建信号量，第一个参数为允许几个线程恭喜信号量，一般0表示多线程共享，并为信号量赋初值,初始值是0
+        {
+            throw std::exception();//抛出异常
+        }
+    }
+    sem(int num)//构造函数重载
+    {
+        if (sem_init(&m_sem, 0, num) != 0)//创建信号量，初始值为num
         {
             throw std::exception();
         }
     }
-    sem(int num)
+    ~sem()//析构
     {
-        if (sem_init(&m_sem, 0, num) != 0)
-        {
-            throw std::exception();
-        }
-    }
-    ~sem()
-    {
-        sem_destroy(&m_sem);
+        sem_destroy(&m_sem);//给信号量的值加1，当有线程阻塞在这个信号量上时，调用这个函数会使得其中一个线程不再阻塞，选择机制是由线程的调度策略决定的
     }
     bool wait()
     {
-        return sem_wait(&m_sem) == 0;
+        return sem_wait(&m_sem) == 0;//从信号量的值减1，但它永远先等待该信号量为一个非零值才开始做减法
     }
     bool post()
     {

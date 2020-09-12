@@ -26,11 +26,11 @@
 
 class util_timer;
 
-struct client_data
+struct client_data//客户端的数据
 {
-    sockaddr_in address;
-    int sockfd;
-    util_timer *timer;
+    sockaddr_in address;//客户端的地址
+    int sockfd;//客户端描述符
+    util_timer *timer;//专有定时器
 };
 
 class util_timer

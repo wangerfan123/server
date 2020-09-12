@@ -154,27 +154,27 @@ void Utils::init(sort_timer_lst timer_lst, int timeslot)
 //对文件描述符设置非阻塞
 int Utils::setnonblocking(int fd)
 {
-    int old_option = fcntl(fd, F_GETFL);
+    int old_option = fcntl(fd, F_GETFL);//获取旧的
     int new_option = old_option | O_NONBLOCK;
-    fcntl(fd, F_SETFL, new_option);
+    fcntl(fd, F_SETFL, new_option);//设置新的
     return old_option;
 }
 
 //将内核事件表注册读事件，ET模式，选择开启EPOLLONESHOT
 void Utils::addfd(int epollfd, int fd, bool one_shot, int TRIGMode)
 {
-    epoll_event event;
-    event.data.fd = fd;
+    epoll_event event;//创建epoll_event事件
+    event.data.fd = fd;//epoll_event的data是一个union，这里用的是其成员fd，将listenfd或者accept放到这个epoll_event中
 
-    if (1 == TRIGMode)
-        event.events = EPOLLIN | EPOLLET | EPOLLRDHUP;
-    else
-        event.events = EPOLLIN | EPOLLRDHUP;
+    if (1 == TRIGMode)//ET触发模式
+        event.events = EPOLLIN | EPOLLET | EPOLLRDHUP;// 关注EPOLLIN|EPOLLET就是ET模式  ,epollrdhup客户端正常关闭
+    else//LT触发模式
+        event.events = EPOLLIN | EPOLLRDHUP;//未关注EPOLLET就是LT模式
 
     if (one_shot)
         event.events |= EPOLLONESHOT;
-    epoll_ctl(epollfd, EPOLL_CTL_ADD, fd, &event);
-    setnonblocking(fd);
+    epoll_ctl(epollfd, EPOLL_CTL_ADD, fd, &event);//利用epoll_ctl加入epoll事件
+    setnonblocking(fd);//设为非阻塞
 }
 
 //信号处理函数
@@ -183,7 +183,8 @@ void Utils::sig_handler(int sig)
     //为保证函数的可重入性，保留原来的errno
     int save_errno = errno;
     int msg = sig;
-    send(u_pipefd[1], (char *)&msg, 1, 0);
+    //send的作用是将信息写入到fd中
+    send(u_pipefd[1], (char *)&msg, 1, 0);//通过pipefd[1]发送信号
     errno = save_errno;
 }
 
@@ -208,6 +209,7 @@ void Utils::timer_handler()
 
 void Utils::show_error(int connfd, const char *info)
 {
+    //send的作用是将信息写入到fd中
     send(connfd, info, strlen(info), 0);
     close(connfd);
 }

@@ -16,13 +16,13 @@ public:
     //C++11以后,使用局部变量懒汉不用加锁
     static Log *get_instance()
     {
-        static Log instance;
-        return &instance;
+        static Log instance;//静态LOG对象
+        return &instance;//返回这个对象的地址
     }
 
     static void *flush_log_thread(void *args)
     {
-        Log::get_instance()->async_write_log();
+        Log::get_instance()->async_write_log();//异步写日志
     }
     //可选择的参数有日志文件、日志缓冲区大小、最大行数以及最长日志条队列
     bool init(const char *file_name, int close_log, int log_buf_size = 8192, int split_lines = 5000000, int max_queue_size = 0);
@@ -38,11 +38,11 @@ private:
     {
         string single_log;
         //从阻塞队列中取出一个日志string，写入文件
-        while (m_log_queue->pop(single_log))
+        while (m_log_queue->pop(single_log))//bool函数，不断取出string
         {
-            m_mutex.lock();
-            fputs(single_log.c_str(), m_fp);
-            m_mutex.unlock();
+            m_mutex.lock();//写操作对日志要加锁，防止顺序出现错误
+            fputs(single_log.c_str(), m_fp);//将这个字符串写入到log文件中
+            m_mutex.unlock();//解锁日志
         }
     }
 

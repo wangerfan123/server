@@ -29,10 +29,10 @@
 class http_conn
 {
 public:
-    static const int FILENAME_LEN = 200;
-    static const int READ_BUFFER_SIZE = 2048;
-    static const int WRITE_BUFFER_SIZE = 1024;
-    enum METHOD
+    static const int FILENAME_LEN = 200;//文件名长度
+    static const int READ_BUFFER_SIZE = 2048;//读缓冲
+    static const int WRITE_BUFFER_SIZE = 1024;//写缓冲
+    enum METHOD   //HTTP方法
     {
         GET = 0,
         POST,
@@ -44,22 +44,22 @@ public:
         CONNECT,
         PATH
     };
-    enum CHECK_STATE
+    enum CHECK_STATE  //有限状态机，检查的状态
     {
-        CHECK_STATE_REQUESTLINE = 0,
-        CHECK_STATE_HEADER,
-        CHECK_STATE_CONTENT
+        CHECK_STATE_REQUESTLINE = 0,//检查请求行的状态
+        CHECK_STATE_HEADER,//检查头部状态
+        CHECK_STATE_CONTENT//检查内容的状态
     };
     enum HTTP_CODE
     {
-        NO_REQUEST,
-        GET_REQUEST,
-        BAD_REQUEST,
-        NO_RESOURCE,
-        FORBIDDEN_REQUEST,
-        FILE_REQUEST,
-        INTERNAL_ERROR,
-        CLOSED_CONNECTION
+        NO_REQUEST,//0
+        GET_REQUEST,//1
+        BAD_REQUEST,//2
+        NO_RESOURCE,//3
+        FORBIDDEN_REQUEST,//4
+        FILE_REQUEST,//5
+        INTERNAL_ERROR,//6
+        CLOSED_CONNECTION//7
     };
     enum LINE_STATUS
     {
@@ -92,9 +92,9 @@ private:
     void init();
     HTTP_CODE process_read();
     bool process_write(HTTP_CODE ret);
-    HTTP_CODE parse_request_line(char *text);
-    HTTP_CODE parse_headers(char *text);
-    HTTP_CODE parse_content(char *text);
+    HTTP_CODE parse_request_line(char *text);//解析请求行
+    HTTP_CODE parse_headers(char *text);//解析头部
+    HTTP_CODE parse_content(char *text);//解析内容
     HTTP_CODE do_request();
     char *get_line() { return m_read_buf + m_start_line; };
     LINE_STATUS parse_line();
@@ -117,17 +117,17 @@ public:
 private:
     int m_sockfd;
     sockaddr_in m_address;
-    char m_read_buf[READ_BUFFER_SIZE];
+    char m_read_buf[READ_BUFFER_SIZE];//读缓冲区
     int m_read_idx;
     int m_checked_idx;
     int m_start_line;
-    char m_write_buf[WRITE_BUFFER_SIZE];
+    char m_write_buf[WRITE_BUFFER_SIZE];//写缓冲区
     int m_write_idx;
-    CHECK_STATE m_check_state;
-    METHOD m_method;
+    CHECK_STATE m_check_state;//检查状态
+    METHOD m_method;//方法
     char m_real_file[FILENAME_LEN];
-    char *m_url;
-    char *m_version;
+    char *m_url;//URL
+    char *m_version;//版本
     char *m_host;
     int m_content_length;
     bool m_linger;

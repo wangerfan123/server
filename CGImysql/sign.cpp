@@ -16,7 +16,7 @@ int main(int argc, char *argv[])
     locker lock;
     string SQLVerify(argv[3]);
     
-    if ("2" == SQLVerify)
+    if ("2" == SQLVerify)//校验方式=2
     {
         string sql_user(argv[4]);
         string sql_passwd(argv[5]);
